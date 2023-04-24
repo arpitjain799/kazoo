@@ -47,9 +47,8 @@ jobs:
     needs: [validate]
 
     name: >
-      Test Python ${{ matrix.python-version }},
+      Linux - Test Python ${{ matrix.python-version }},
       ZK ${{ matrix.zk-version }}
-
     runs-on: ubuntu-latest
 
     strategy:
@@ -111,3 +110,54 @@ jobs:
 
       - name: Publish Codecov report
         uses: codecov/codecov-action@v3
+
+  test_windows:
+    needs: [validate]
+    name: Windows - Test Python 3.10, ZK 3.7.1
+
+    runs-on: windows-latest
+    steps:
+      - name: Handle the code
+        uses: actions/checkout@v3
+
+      - name: "Set up Python 3.10"
+        uses: actions/setup-python@v4
+        with:
+          python-version: "3.10"
+
+      - name: Handle pip cache
+        uses: actions/cache@v3
+        with:
+          path: ~/.cache/pip
+          key: ${{ runner.os }}-pip-${{ hashFiles('**/requirements*.txt') }}
+          restore-keys: |
+            ${{ runner.os }}-pip-
+
+      - name: Handle ZK installation cache
+        uses: actions/cache@v3
+        with:
+          path: zookeeper
+          key: ${{ runner.os }}-zookeeper
+          restore-keys: |
+            ${{ runner.os }}-zookeeper
+
+      # https://github.com/actions/setup-java
+      - name: Setup Java
+        uses: actions/setup-java@v3
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+
+      - name: Install required dependencies
+        run: |
+          python3 -m pip install --upgrade pip
+          pip install tox
+
+      - name: Test with tox
+        run: tox -e py310
+        env:
+          ZOOKEEPER_VERSION: 3.7.1
+          ZOOKEEPER_PREFIX: "apache-"
+          ZOOKEEPER_SUFFIX: "-bin"
+          ZOOKEEPER_LIB: "lib"
+        shell: bash
